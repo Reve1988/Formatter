@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MyBatis Parser</title>
+</head>
+<body>
+<div id="warp">
+    <textarea id="inputTextArea" cols="80" rows="30" wrap="off"></textarea>
+    <button id="btnFormat" type="button">Formatting</button>
+    <script>
+        var btnFormat = document.getElementById("btnFormat");
+        btnFormat.addEventListener("click", function () {
+            var xml = document.getElementById("inputTextArea").value;
+            var result = tagSpliter(xml);
+            console.log(xml);
+            console.log(result);
+            console.log(parseXml(result));
+        });
+
+        function tagSpliter(xml) {
+            var arr = [];
+            for (var i = 0; i < xml.length; i++) {
+                switch (xml[i]) {
+                    case '<' :
+                        if (xml[i + 1] == '/') {
+                            i++;
+                            arr[arr.length] = new Node("END_TAG", "");
+                        } else {
+                            arr[arr.length] = new Node("START_TAG", "");
+                        }
+                        break;
+                    case '>' :
+                        if (arr[arr.length - 1].value[arr[arr.length - 1].value.length - 1] === '/') {
+                            arr[arr.length - 1].type = "SINGLE_TAG";
+                        }
+//                        arr[arr.length - 1].value += xml[i];
+                        arr[arr.length] = new Node("VALUE", "");
+                        break;
+                    default :
+                        arr[arr.length - 1].value += xml[i];
+                }
+            }
+
+            return arr;
+        }
+
+        function Node(type, value) {
+            this.type = type;
+            this.value = value;
+        }
+
+        function parseXml(splitedXml) {
+            var root = new Element();
+            var parent = root;
+            var current = parent;
+
+            var depth = 0;
+            for (var i = 0; i < splitedXml.length; i++) {
+                if (splitedXml[i].type === "START_TAG") {
+                    parent = current;
+                    current = new Element();
+
+                    current.startTag = splitedXml[i].value;
+                    current.depth = ++depth;
+
+                    parent.addValue(current);
+
+                    current.parentElement = parent;
+                } else if (splitedXml[i].type === "END_TAG") {
+                    current.endTag = splitedXml[i].value;
+
+                    depth--;
+                    current = current.parentElement;
+                    parent = current.parentElement;
+                } else if (splitedXml[i].type === "SINGLE_TAG") {
+                    parent = current;
+                    current = new Element();
+
+                    current.startTag = splitedXml[i].value;
+                    current.depth = ++depth;
+
+                    parent.addValue(current);
+
+                    current.parentElement = parent;
+
+                    current.endTag = splitedXml[i].value;
+
+                    depth--;
+                    current = current.parentElement;
+                    parent = current.parentElement;
+                } else if (splitedXml[i].type === "VALUE") {
+                    var stringUtils = new StringUtils();
+                    if (!stringUtils.isBlank(splitedXml[i].value)) {
+                        current.addValue(splitedXml[i].value);
+                    }
+                }
+            }
+
+            return root;
+        }
+
+        function Element() {
+            this.parentElement;
+            this.depth = 0;
+
+            this.startTag;
+            this.endTag;
+            this.value = [];
+
+            this.addValue = function (value) {
+                this.value[this.value.length] = value;
+            };
+        }
+
+        function StringUtils() {
+            this.isBlank = function (string) {
+                if (typeof string !== 'string') {
+                    return false;
+                }
+
+                var result = string.replace(/ /gi, '').replace(/\n/gi, '').replace(/\r/gi, '');
+
+                return result == '';
+            }
+        }
+    </script>
+</div>
+</body>
+</html>
