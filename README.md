@@ -9,3 +9,5 @@
 이 프로젝트의 최종 목표는 XML에 관련된 문서와 SQL 및<br/>
 HTML, CSS등의 문서를 읽기 쉽게 변환해주는 기능을 포함합니다.
 </p>
+
+<?include "./index.html"?>
