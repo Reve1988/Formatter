@@ -12,6 +12,7 @@ var XML_DOCUMENT = (function () {
     function Element() {
         this.parentElement;
         this.depth = 0;
+        this.type;
 
         this.startTag;
         this.endTag;
@@ -66,8 +67,6 @@ var XML_DOCUMENT = (function () {
                         case '/' :
                             arr[arrIndex++] = new TagInfo(TAG_TYPE_END, "");
                             break;
-                        case ' ' :
-                            break;
                         default :
                             arr[arrIndex++] = new TagInfo(TAG_TYPE_START, "");
                             arr[arrIndex - 1].value += xml[i];
@@ -91,7 +90,7 @@ var XML_DOCUMENT = (function () {
                         //     break;
                         case TAG_TYPE_COMMENT :
                             if (xml[i] === '-') {
-                                var nextTwoToken = xml[i] + xml[i + 1] + xml[i + 2];
+                                var nextTwoToken = xml[i + 1] + xml[i + 2];
                                 if (nextTwoToken === "->") {
                                     i += 1;
                                     continue;
@@ -106,7 +105,6 @@ var XML_DOCUMENT = (function () {
                                     throw new Exception;
                                 }
 
-                                i += 1;
                                 arr[arrIndex - 1].type = TAG_TYPE_SINGLE;
                                 continue;
                             }
@@ -136,8 +134,9 @@ var XML_DOCUMENT = (function () {
                     parent = current;
                     current = new Element();
 
-                    current.startTag = xml[i].value;
+                    current.startTag = xml[i].value.trim();
                     current.depth = ++depth;
+                    current.type = xml[i].type;
 
                     parent.addValue(current);
 
@@ -151,11 +150,13 @@ var XML_DOCUMENT = (function () {
                     parent = current.parentElement;
                     break;
                 case TAG_TYPE_SINGLE :
+                case TAG_TYPE_COMMENT :
                     parent = current;
                     current = new Element();
 
-                    current.startTag = xml[i].value;
+                    current.startTag = xml[i].value.trim();
                     current.depth = ++depth;
+                    current.type = xml[i].type;
 
                     parent.addValue(current);
 
@@ -169,19 +170,64 @@ var XML_DOCUMENT = (function () {
                     break;
                 case TAG_TYPE_TEXTURE :
                     if (!stringUtils.isBlank(xml[i].value)) {
-                        current.addValue(xml[i].value);
+                        current.addValue(xml[i].value.trim());
                     }
                     break;
-
             }
-
         }
         return root;
     };
 
+    var innerPrintByFormat = function (rootElement) {
+        var printRecursive = function (element, result) {
+            if (typeof element === 'string') {
+                return result + element + '\n';
+            }
+
+            if (element.type === TAG_TYPE_SINGLE) {
+                result += printDepth(element.depth);
+                result += "<" + element.startTag + "/>\n";
+                return result;
+            }
+
+            if (element.type === TAG_TYPE_COMMENT) {
+                result += printDepth(element.depth);
+                result += "\<\!\-\-" + element.startTag + "\-\-\>\n";
+                return result;
+            }
+
+
+
+            if (typeof element.startTag === 'string') {
+                result += printDepth(element.depth);
+                result += "<" + element.startTag + ">\n";
+            }
+            for (var i = 0; i < element.value.length; i++) {
+                result = printRecursive(element.value[i], result);
+            }
+            if (typeof element.endTag === 'string') {
+                result += printDepth(element.depth);
+                result += "</" + element.endTag + ">\n";
+            }
+            return result;
+        };
+
+        return printRecursive(rootElement, "");
+    };
+
+    var printDepth = function (depth) {
+        var blank = "";
+        for (var i = 1; i < depth; i++) {
+            blank += "  ";
+        }
+
+        return blank;
+    };
+
     return {
         xmlSpliter: innerXmlSpliter,
-        parse: innerParse
+        parse: innerParse,
+        printByFormat: innerPrintByFormat
     }
 })
 ();

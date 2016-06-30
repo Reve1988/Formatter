@@ -7,12 +7,29 @@ var stringUtils = (function () {
             return false;
         }
 
-        var result = string.replace(/ /gi, '').replace(/\n/gi, '').replace(/\r/gi, '');
+        for (var i = 0; i < string.length; i++) {
+            switch (string[i]) {
+                case ' ' :
+                    break;
+                case '\n' :
+                    break;
+                case '\r' :
+                    break;
+                default :
+                    return false;
+            }
+        }
+        // var result = string.replace(/ /gi, '').replace(/\n/gi, '').replace(/\r/gi, '');
 
-        return result == '';
+        return true;
+    };
+
+    var innerIsNotBlank = function (string) {
+        return innerIsBlank(string);
     };
 
     return {
-        isBlank : innerIsBlank
+        isBlank: innerIsBlank,
+        isNotBlank: innerIsNotBlank
     }
 })();

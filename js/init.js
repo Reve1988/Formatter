@@ -6,8 +6,15 @@ window.onload = function () {
     btnFormat.addEventListener("click", function () {
         var xml = document.getElementById("inputTextArea").value;
         var result = XML_DOCUMENT.xmlSpliter(xml);
+        var rootElement = XML_DOCUMENT.parse(result);
+        var resultString = XML_DOCUMENT.printByFormat(rootElement);
+
         console.log(xml);
         console.log(result);
-        console.log(XML_DOCUMENT.parse(result));
+        console.log(rootElement);
+        console.log(resultString);
+
+        var textArea = document.getElementById("inputTextArea");
+        textArea.value = resultString;
     });
 };
