@@ -13,7 +13,7 @@ var stringUtils = (function () {
                     break;
                 case '\n' :
                     break;
-                case '\r' :
+                case '\t' :
                     break;
                 default :
                     return false;
