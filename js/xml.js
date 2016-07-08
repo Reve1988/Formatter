@@ -8,8 +8,10 @@ var XML_DOCUMENT = (function () {
     var TAG_TYPE_END = 3;
     var TAG_TYPE_TEXTURE = 4;
     var TAG_TYPE_SINGLE = 5;
+    var TAG_TYPE_DEFINITION = 6;
+    var TAG_TYPE_DOCTYPE = 7;
 
-    var innerXmlSpliter = function (xml) {
+    var xmlSpliter = function (xml) {
         var arr = [];
         var arrIndex = 0;
 
@@ -33,18 +35,22 @@ var XML_DOCUMENT = (function () {
                 case '<' :
                     i += 1;
                     switch (xml[i]) {
-                        // case '?' :
-                        //     arr[arrIndex++] = new TagInfo(TAG_TYPE_DTD, "");
-                        //     break;
+                        case '?' :
+                            arr[arrIndex] = new TagInfo(TAG_TYPE_DEFINITION, "");
+                            arrIndex++;
+                            break;
                         case '!' :
-                            var nextTwoToken = xml[i + 1] + xml[i + 2];
-                            if (nextTwoToken !== "--") {
+                            if (xml.slice(i, i + 3) === "!--") {
+                                arr[arrIndex] = new TagInfo(TAG_TYPE_COMMENT, "");
+                                i += 2;
+                            } else if (xml.slice(i, i + 8) === "!DOCTYPE") {
+                                arr[arrIndex] = new TagInfo(TAG_TYPE_DOCTYPE, "");
+                                i += 7;
+                            } else {
                                 throw new Error();
                             }
 
-                            arr[arrIndex] = new TagInfo(TAG_TYPE_COMMENT, "");
                             arrIndex++;
-                            i += 2;
                             break;
                         case '/' :
                             arr[arrIndex] = new TagInfo(TAG_TYPE_END, "");
@@ -57,6 +63,7 @@ var XML_DOCUMENT = (function () {
                     }
                     break;
                 case '>' :
+                    //종료조건이 맞지 않으면 오류표기 할 필요가 있음
                     arr[arrIndex++] = new TagInfo(TAG_TYPE_TEXTURE, "");
                     break;
                 default :
@@ -77,7 +84,7 @@ var XML_DOCUMENT = (function () {
                                 var nextTwoToken = xml[i + 1] + xml[i + 2];
                                 if (nextTwoToken === "->") {
                                     i += 1;
-                                    continue;
+                                    break;
                                 }
                             }
 
@@ -90,11 +97,20 @@ var XML_DOCUMENT = (function () {
                                 }
 
                                 arr[arrIndex - 1].setType(TAG_TYPE_SINGLE);
-                                continue;
+                                break;
                             }
                             arr[arrIndex - 1].addValue(xml[i]);
                             break;
                         case TAG_TYPE_END :
+                            arr[arrIndex - 1].addValue(xml[i]);
+                            break;
+                        case TAG_TYPE_DEFINITION :
+                            if (xml[i] === '?') {
+                                if (xml[i + 1] !== '>') {
+                                    throw new Error();
+                                }
+                                break;
+                            }
                             arr[arrIndex - 1].addValue(xml[i]);
                             break;
                         default :
@@ -106,7 +122,7 @@ var XML_DOCUMENT = (function () {
         return arr;
     };
 
-    var innerParse = function (xml) {
+    var parse = function (xml) {
         var root = new Element();
         var parent = root;
         var current = parent;
@@ -135,6 +151,8 @@ var XML_DOCUMENT = (function () {
 
                     break;
                 case TAG_TYPE_SINGLE :
+                case TAG_TYPE_DEFINITION :
+                case TAG_TYPE_DOCTYPE :
                 case TAG_TYPE_COMMENT :
                     parent = current;
                     current = new Element();
@@ -154,9 +172,22 @@ var XML_DOCUMENT = (function () {
                     break;
                 case TAG_TYPE_TEXTURE :
                     var text = xml[i].getValue();
-                    if (!stringUtils.isBlank(text)) {
-                        current.addValue(text.trim());
+                    if (stringUtils.isBlank(text)) {
+                        break;
                     }
+
+                    parent = current;
+                    current = new Element();
+
+                    current.setDepth(depth + 1);
+                    current.addValue(text.trim());
+                    current.setType(xml[i].getType());
+                    current.setParentElement(parent);
+
+                    parent.addValue(current);
+
+                    current = current.getParentElement();
+                    parent = current.getParentElement();
 
                     break;
             }
@@ -165,10 +196,12 @@ var XML_DOCUMENT = (function () {
         return root;
     };
 
-    var innerPrintByFormat = function (rootElement) {
+    var print = function (rootElement) {
         var printRecursive = function (element, result) {
-            if (typeof element === 'string') {
-                return result + element + '\n';
+            if (element.getType() === TAG_TYPE_TEXTURE) {
+                result += printDepth(element.getDepth());
+                result += element.getValue(0) + '\n';
+                return result;
             }
 
             if (element.getType() === TAG_TYPE_SINGLE) {
@@ -180,6 +213,18 @@ var XML_DOCUMENT = (function () {
             if (element.getType() === TAG_TYPE_COMMENT) {
                 result += printDepth(element.getDepth());
                 result += "\<\!\-\-" + element.getStartTag() + "\-\-\>\n";
+                return result;
+            }
+
+            if (element.getType() === TAG_TYPE_DEFINITION) {
+                result += printDepth(element.getDepth());
+                result += "\<\?" + element.getStartTag() + "\?\>\n";
+                return result;
+            }
+
+            if (element.getType() === TAG_TYPE_DOCTYPE) {
+                result += printDepth(element.getDepth());
+                result += "\<\!DOCTYPE " + element.getStartTag() + "\>\n";
                 return result;
             }
 
@@ -204,7 +249,7 @@ var XML_DOCUMENT = (function () {
     var printDepth = function (depth) {
         var blank = "";
         for (var i = 1; i < depth; i++) {
-            blank += "    ";
+            blank += "\t";
         }
 
         return blank;
@@ -322,9 +367,9 @@ var XML_DOCUMENT = (function () {
     }
 
     return {
-        xmlSpliter: innerXmlSpliter,
-        parse: innerParse,
-        printByFormat: innerPrintByFormat
+        xmlSpliter: xmlSpliter,
+        parse: parse,
+        print: print
     }
 })
 ();

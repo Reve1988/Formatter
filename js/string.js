@@ -2,7 +2,7 @@
  * Created by giwoong.Kim on 2016. 6. 25..
  */
 var stringUtils = (function () {
-    var innerIsBlank = function (string) {
+    var isBlank = function (string) {
         if (typeof string !== 'string') {
             return false;
         }
@@ -24,12 +24,12 @@ var stringUtils = (function () {
         return true;
     };
 
-    var innerIsNotBlank = function (string) {
-        return innerIsBlank(string);
+    var isNotBlank = function (string) {
+        return isBlank(string);
     };
 
     return {
-        isBlank: innerIsBlank,
-        isNotBlank: innerIsNotBlank
+        isBlank: isBlank,
+        isNotBlank: isNotBlank
     }
 })();
